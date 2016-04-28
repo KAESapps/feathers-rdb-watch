@@ -1,0 +1,23 @@
+{
+  "name": "feathers-rdb-watch",
+  "version": "1.0.0",
+  "description": "Reactive real-time service for Feathers and RethinkDB",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KAESapps/feathers-rdb-watch.git"
+  },
+  "keywords": [
+    "feathers"
+  ],
+  "author": "sylvain@kaes.fr",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/KAESapps/feathers-rdb-watch/issues"
+  },
+  "homepage": "https://github.com/KAESapps/feathers-rdb-watch#readme",
+  "dependencies": {}
+}
