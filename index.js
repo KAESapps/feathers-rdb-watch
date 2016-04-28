@@ -56,7 +56,7 @@ module.exports = class SubscriptionsService {
         that.remove(data.id, params).catch(console.error.bind(console, 'error deleting subscription'))
       )
       console.log(this._serviceName, 'subscription created', data.id)
-      subscriptions[subscriptionId] = {cursor: cursor, socket: params.socket}
+      subscriptions[subscriptionId] = cursor
       var req = data.type === 'query' ?
         service.find({query: data.params}):
         service.get(data.params)
@@ -82,7 +82,7 @@ module.exports = class SubscriptionsService {
     const clientId = params.socket.id
     const subscriptionId = clientId+'::'+id
 
-    const cursor = this._subscriptions[subscriptionId].cursor
+    const cursor = this._subscriptions[subscriptionId]
     cursor.close()
     console.log(this._serviceName, 'subscription deleted', subscriptionId)
     delete this._subscriptions[subscriptionId]
