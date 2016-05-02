@@ -1,7 +1,11 @@
 'use strict';
 
-const rdbChangesQuery = (table, params) => {
-  var sort = params.$sort ? {index: params.$sort} : {index: 'id'}
+const rdbChangesQuery = (r, table, params) => {
+  var sort = {index: 'id'}
+  if (params.$sort) {
+    const sortField = Object.keys(params.$sort)[0]
+    sort.index = params.$sort[sortField] ? sortField : r.desc(sortField)
+  }
   var limit = params.$limit || 100
   var skip = params.$skip
   var filter = Object.assign({}, params)
@@ -9,28 +13,25 @@ const rdbChangesQuery = (table, params) => {
   delete filter.$limit
   delete filter.$skip
 
-  return table
+  var query = table
     .orderBy(sort)
     .filter(filter)
     .pluck('id')
-    // .skip(data.skip || 0)
     .limit(limit)
-    .changes({
-      // squash: true,
-      // includeInitial: true,
-      // includeStates: true,
-      // includeOffsets: true,
-      // includeTypes: true,
+  if (params.skip) query = query.skip(params.skip)
+  return query.changes({
+      squash: true,
+      includeInitial: false,
     })
 }
 
-
+// TODO: don't use a class
 module.exports = class SubscriptionsService {
   constructor(arg) {
     this.events = ['change'];
     this._subscriptions = {}
     this._db = arg.db
-    this._serviceName = arg.service
+    this._serviceName = arg.service // TODO: allow to inject the service directly
     this._tableName = arg.table
   }
 
@@ -40,6 +41,7 @@ module.exports = class SubscriptionsService {
   }
 
   create(data, params) {
+    const queryParams = data.params
     const that = this
     const path = this._path
     const subscriptions = this._subscriptions
@@ -48,18 +50,18 @@ module.exports = class SubscriptionsService {
     const clientId = socket.id
     const subscriptionId = clientId+'::'+data.id
     const query = data.type === 'query' ?
-      rdbChangesQuery(this._db.table(this._tableName), data.params) :
-      this._db.table(this._tableName).get(data.params).changes()
+      rdbChangesQuery(this._db, this._db.table(this._tableName), queryParams) :
+      this._db.table(this._tableName).get(queryParams).changes()
     return query.run().then(cursor => {
-      //à la déconnexion du client, fermer le curseur
+      //close cursor when client disconnect
       socket.on('disconnect', () =>
         that.remove(data.id, params).catch(console.error.bind(console, 'error deleting subscription'))
       )
       console.log(this._serviceName, 'subscription created', data.id)
       subscriptions[subscriptionId] = cursor
       var req = data.type === 'query' ?
-        service.find({query: data.params}):
-        service.get(data.params)
+        service.find({query: Object.assign({}, queryParams)}): // needs to send a copy since qyueryParams is mutated by the called code
+        service.get(queryParams)
       // init result
       req.then(result => {
         socket.emit(path+' change', {key: data.id, type: data.type, value: result})
@@ -69,10 +71,10 @@ module.exports = class SubscriptionsService {
         if (err) return console.error(err)
         console.log(this._serviceName, 'changed', data.id /*,change*/)
         req = data.type === 'query' ?
-          service.find({query: data.params}) :
-          service.get(data.params)
+          service.find({query: Object.assign({}, queryParams)}) :
+          service.get(queryParams)
         req.then(result => {
-          socket.emit(path+' change', {key: data.id, type: data.type, params: data.params, value: result})
+          socket.emit(path+' change', {key: data.id, type: data.type, params: queryParams, value: result})
         }).catch(err => console.warn('error getting value for key', data.id, err))
       })
     })
