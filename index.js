@@ -7,7 +7,6 @@ const rdbChangesQuery = (r, table, params) => {
     sort.index = params.$sort[sortField] ? sortField : r.desc(sortField)
   }
   var limit = params.$limit || 100
-  var skip = params.$skip
   var filter = Object.assign({}, params)
   delete filter.$sort
   delete filter.$limit
@@ -18,7 +17,7 @@ const rdbChangesQuery = (r, table, params) => {
     .filter(filter)
     .pluck('id')
     .limit(limit)
-  if (params.skip) query = query.skip(params.skip)
+  // if (params.$skip) query = query.skip(params.$skip) // does not work actually (https://github.com/rethinkdb/rethinkdb/issues/4909)
   return query.changes({
       squash: true,
       includeInitial: false,
