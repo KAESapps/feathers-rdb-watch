@@ -4,13 +4,16 @@ const rdbChangesQuery = (r, table, params) => {
   var sort = {index: 'id'}
   if (params.$sort) {
     const sortField = Object.keys(params.$sort)[0]
-    sort.index = params.$sort[sortField] ? sortField : r.desc(sortField)
+    sort.index = params.$sort[sortField] === -1 ? r.desc(sortField) : sortField
+    console.log('watch sort', sort)
   }
   var limit = params.$limit || 100
   var filter = Object.assign({}, params)
   delete filter.$sort
   delete filter.$limit
   delete filter.$skip
+  delete filter.$select
+  // console.log('watch filter', filter)
 
   var query = table
     .orderBy(sort)
@@ -19,9 +22,9 @@ const rdbChangesQuery = (r, table, params) => {
     .limit(limit)
   // if (params.$skip) query = query.skip(params.$skip) // does not work actually (https://github.com/rethinkdb/rethinkdb/issues/4909)
   return query.changes({
-      squash: true,
-      includeInitial: false,
-    })
+    squash: true,
+    includeInitial: false,
+  })
 }
 
 // TODO: don't use a class
@@ -68,7 +71,7 @@ module.exports = class SubscriptionsService {
       // next results
       cursor.each((err, change) => {
         if (err) return console.error(err)
-        console.log(this._serviceName, 'changed', data.id /*,change*/)
+        console.log(this._serviceName, 'changed', data.id, change)
         req = data.type === 'query' ?
           service.find({query: Object.assign({}, queryParams)}) :
           service.get(queryParams)
