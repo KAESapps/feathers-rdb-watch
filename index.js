@@ -32,6 +32,7 @@ module.exports = class SubscriptionsService {
   constructor(arg) {
     this.events = ['change'];
     this._subscriptions = {}
+    this._disconnectListeners = {}
     this._db = arg.db
     this._serviceName = arg.service // TODO: allow to inject the service directly
     this._tableName = arg.table
@@ -44,7 +45,6 @@ module.exports = class SubscriptionsService {
 
   create(data, params) {
     const queryParams = data.params
-    const that = this
     const path = this._path
     const subscriptions = this._subscriptions
     const service = this._service
@@ -56,9 +56,9 @@ module.exports = class SubscriptionsService {
       this._db.table(this._tableName).get(queryParams).changes()
     return query.run().then(cursor => {
       //close cursor when client disconnect
-      socket.on('disconnect', () =>
-        that.remove(data.id, params).catch(console.error.bind(console, 'error deleting subscription'))
-      )
+      var disconnectListener = () => this.remove(data.id, params).catch(console.error.bind(console, 'error deleting subscription'))
+      this._disconnectListeners[subscriptionId] = disconnectListener
+      socket.on('disconnect', disconnectListener)
       console.log(this._serviceName, 'subscription created', data.id)
       subscriptions[subscriptionId] = cursor
       var req = data.type === 'query' ?
@@ -86,10 +86,15 @@ module.exports = class SubscriptionsService {
     const clientId = params.socket.id
     const subscriptionId = clientId+'::'+id
 
+    // unsubscribe from rethinkdb change feed
     const cursor = this._subscriptions[subscriptionId]
     cursor.close()
     console.log(this._serviceName, 'subscription deleted', subscriptionId)
     delete this._subscriptions[subscriptionId]
+    // remove disconnect listener
+    params.socket.removeListener('disconnect', this._disconnectListeners[subscriptionId])
+    delete this._disconnectListeners[subscriptionId]
+    
     return Promise.resolve({id: id, closed: true})
   }
 }
