@@ -5,8 +5,9 @@ const rdbChangesQuery = (r, table, params) => {
   if (params.$sort) {
     const sortField = Object.keys(params.$sort)[0]
     sort.index = params.$sort[sortField] === -1 ? r.desc(sortField) : sortField
-    console.log('watch sort', sort)
+    // console.log('watch sort', sort)
   }
+  var skip = params.$skip || 0
   var limit = params.$limit || 100
   var filter = Object.assign({}, params)
   delete filter.$sort
@@ -19,8 +20,8 @@ const rdbChangesQuery = (r, table, params) => {
     .orderBy(sort)
     .filter(filter)
     .pluck('id')
-    .limit(limit)
-  // if (params.$skip) query = query.skip(params.$skip) // does not work actually (https://github.com/rethinkdb/rethinkdb/issues/4909)
+    // .skip(skip) // does not work actually (https://github.com/rethinkdb/rethinkdb/issues/4909)
+    .limit(skip + limit) // since skip does not work, we watch from the beginning
   return query.changes({
     squash: true,
     includeInitial: false,
@@ -94,7 +95,7 @@ module.exports = class SubscriptionsService {
     // remove disconnect listener
     params.socket.removeListener('disconnect', this._disconnectListeners[subscriptionId])
     delete this._disconnectListeners[subscriptionId]
-    
+
     return Promise.resolve({id: id, closed: true})
   }
 }
