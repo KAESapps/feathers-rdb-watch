@@ -19,5 +19,7 @@
     "url": "https://github.com/KAESapps/feathers-rdb-watch/issues"
   },
   "homepage": "https://github.com/KAESapps/feathers-rdb-watch#readme",
-  "dependencies": {}
+  "dependencies": {
+    "feathers-rethinkdb": "git://github.com/kaesapps/feathers-rethinkdb.git#2a2530bb43a61faad7565025f13a7fc65f6abfee"
+  }
 }
