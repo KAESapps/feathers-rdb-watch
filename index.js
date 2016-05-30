@@ -1,4 +1,5 @@
 'use strict';
+var addFilters = require('feathers-rethinkdb/lib/parse')
 
 const rdbChangesQuery = (r, table, params) => {
   var sort = {index: 'id'}
@@ -16,16 +17,16 @@ const rdbChangesQuery = (r, table, params) => {
   delete filter.$select
   // console.log('watch filter', filter)
 
-  var query = table
-    .orderBy(sort)
-    .filter(filter)
+  var query = table.orderBy(sort)
+  query = addFilters({options: {r}}, query, filter)
+  return query
     .pluck('id')
     // .skip(skip) // does not work actually (https://github.com/rethinkdb/rethinkdb/issues/4909)
     .limit(skip + limit) // since skip does not work, we watch from the beginning
-  return query.changes({
-    squash: true,
-    includeInitial: false,
-  })
+    .changes({
+      squash: true,
+      includeInitial: false,
+    })
 }
 
 // TODO: don't use a class
