@@ -56,16 +56,19 @@ module.exports = class SubscriptionsService {
     const query = data.type === 'query' ?
       rdbChangesQuery(this._db, this._db.table(this._tableName), queryParams) :
       this._db.table(this._tableName).get(queryParams).changes()
-    return query.run().then(cursor => {
+    return query.run({cursor: true}).then(cursor => {
       //close cursor when client disconnect
       var disconnectListener = () => this.remove(data.id, params).catch(console.error.bind(console, 'error deleting subscription'))
       this._disconnectListeners[subscriptionId] = disconnectListener
       socket.on('disconnect', disconnectListener)
       console.log(this._serviceName, 'subscription created', data.id)
       subscriptions[subscriptionId] = cursor
+      if (data.type === 'query') {
+        var findParams = Object.assign({}, params, {query: Object.assign({}, queryParams)})// needs to send a copy since qyueryParams is mutated by the called code
+      }
       var req = data.type === 'query' ?
-        service.find({query: Object.assign({}, queryParams)}): // needs to send a copy since qyueryParams is mutated by the called code
-        service.get(queryParams)
+        service.find(findParams):
+        service.get(queryParams, params)
       // init result
       req.then(result => {
         socket.emit(path+' change', {key: data.id, type: data.type, value: result})
@@ -73,14 +76,15 @@ module.exports = class SubscriptionsService {
       // next results
       cursor.each((err, change) => {
         if (err) return console.error(err)
-        console.log(this._serviceName, 'changed', data.id, change)
+        // console.log(this._serviceName, 'changed', data.id, change)
         req = data.type === 'query' ?
-          service.find({query: Object.assign({}, queryParams)}) :
-          service.get(queryParams)
+          service.find(findParams) :
+          service.get(queryParams, params)
         req.then(result => {
           socket.emit(path+' change', {key: data.id, type: data.type, params: queryParams, value: result})
         }).catch(err => console.warn('error getting value for key', data.id, err))
       })
+      return req // prevent error messages where a promise was not returned
     })
   }
 
