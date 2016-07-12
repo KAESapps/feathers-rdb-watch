@@ -63,11 +63,8 @@ module.exports = class SubscriptionsService {
       socket.on('disconnect', disconnectListener)
       console.log(this._serviceName, 'subscription created', data.id)
       subscriptions[subscriptionId] = cursor
-      if (data.type === 'query') {
-        var findParams = Object.assign({}, params, {query: Object.assign({}, queryParams)})// needs to send a copy since qyueryParams is mutated by the called code
-      }
       var req = data.type === 'query' ?
-        service.find(findParams):
+        service.find(Object.assign({}, params, {query: Object.assign({}, queryParams)})): // needs to send a copy since qyueryParams is mutated by the called code
         service.get(queryParams, params)
       // init result
       req.then(result => {
@@ -78,7 +75,7 @@ module.exports = class SubscriptionsService {
         if (err) return console.error(err)
         // console.log(this._serviceName, 'changed', data.id, change)
         req = data.type === 'query' ?
-          service.find(findParams) :
+          service.find(Object.assign({}, params, {query: Object.assign({}, queryParams)})) :
           service.get(queryParams, params)
         req.then(result => {
           socket.emit(path+' change', {key: data.id, type: data.type, params: queryParams, value: result})
