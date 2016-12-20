@@ -100,4 +100,9 @@ module.exports = class SubscriptionsService {
 
     return Promise.resolve({id: id, closed: true})
   }
+
+  filter() {
+    return false // prevent sending standard CRUD events
+  }
+
 }
