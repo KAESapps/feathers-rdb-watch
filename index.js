@@ -81,7 +81,7 @@ module.exports = class SubscriptionsService {
           socket.emit(path+' change', {key: data.id, type: data.type, params: queryParams, value: result})
         }).catch(err => console.warn('error getting value for key', data.id, err))
       })
-      return req // prevent error messages where a promise was not returned
+      return null // prevent sending event 'created'
     })
   }
 
@@ -98,11 +98,8 @@ module.exports = class SubscriptionsService {
     params.socket.removeListener('disconnect', this._disconnectListeners[subscriptionId])
     delete this._disconnectListeners[subscriptionId]
 
-    return Promise.resolve({id: id, closed: true})
+    return Promise.resolve(null)
   }
 
-  filter() {
-    return false // prevent sending standard CRUD events
-  }
 
 }
